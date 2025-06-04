@@ -16,3 +16,8 @@ A command-line assistant takes genus and species names as inputs and runs a loca
 
 #### Run the Agent
 ``` python3 chat.py ```
+
+# iChatBio-SDK
+``` python3 __main__.py ```
+
+agent card should be present at http://localhost:9999/.well-known/agent.json if everything goes well
