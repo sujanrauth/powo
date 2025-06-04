@@ -1,6 +1,10 @@
-openai
+ichatbio-sdk~=0.1.1
+a2a-sdk~=0.2.4
+openai~=1.79.0
+pydantic~=2.11.4
+instructor~=1.8.2
+dotenv~=0.9.9
+pytest~=8.3.5
 openai-agents
 python-dotenv        
 pykew
-instructor
-pydantic 
