@@ -86,6 +86,7 @@ class PlantQueryModel(BaseModel):
     species: str = Field(..., description="Species of the plant, e.g indica")
 
 class EmptyModel(BaseModel):
+    """Just an Empty model so stop the parameter error in the AgentEntrypoint"""
     ...
 
 class POWOAgent(IChatBioAgent):
@@ -116,7 +117,7 @@ class POWOAgent(IChatBioAgent):
         try:
             yield ProcessMessage(summary="Analyzing plant request", description="Extracting genus and species from user message")
 
-            # Extract plant information using OpenAI
+            # Extract plant information from the user request using OpenAI
             plant_query: PlantQueryModel = await instructor_client.chat.completions.create(
                 model="gpt-4",
                 response_model=PlantQueryModel,
@@ -153,11 +154,13 @@ class POWOAgent(IChatBioAgent):
                 data={"search_url": search_url}
             )
 
+            # Call the serach API to get all the occurances of the given the plant scientific name 
             response = requests.get(search_url)
             if response.status_code != 200:
                 yield TextMessage(text=f"Search failed due to server error")
                 return
             
+            # Extract the unique fqids from the search results
             search_data = response.json()
             fqids = self._extract_fqids(search_data)
 
@@ -172,7 +175,6 @@ class POWOAgent(IChatBioAgent):
             )
 
             # Get detailed information for each fqid
-
             yield ProcessMessage(
                 summary="Retrieving plant details",
                 description=f"Fetching detailed information for {len(fqids)} plants"
@@ -183,6 +185,7 @@ class POWOAgent(IChatBioAgent):
             for fqid in fqids:
                 detail_url = f"{os.getenv("BASE_TAXON_URL")}/{fqid}"
 
+                # Call the taxon API to get the detailed information about all the search result plants with fqids
                 detail_response = requests.get(detail_url)
                 
                 if detail_response.status_code == 200:
@@ -195,6 +198,7 @@ class POWOAgent(IChatBioAgent):
                 description=f"Successfully retrieved {len(plant_details)} plant details",
             )
             
+            # Create an ArtifactMessage with all the data
             yield ArtifactMessage(
                 mimetype="text/markdown",
                 description=f"Detailed botanical information for {plant_query.genus} {plant_query.species}",
@@ -222,7 +226,7 @@ class POWOAgent(IChatBioAgent):
 
 
     def _build_search_url(self, genus: str, species: str) -> str:
-        """Build the search URL for Kew Gardens API"""
+        """Build the search URL for Powo API"""
         params = {
             'perPage': 500,
             'cursor': '*',
