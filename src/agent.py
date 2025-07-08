@@ -6,15 +6,15 @@ import dotenv
 import instructor
 from instructor.exceptions import InstructorRetryException
 from openai import AsyncOpenAI
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ValidationError
 from ichatbio.agent import IChatBioAgent
 from ichatbio.agent_response import ResponseContext, IChatBioAgentProcess
 from ichatbio.types import AgentCard, AgentEntrypoint
 
 dotenv.load_dotenv()
 
-# General Plant Model
-class Plant(BaseModel):
+# Result part of the response from the Search API
+class PlantResult(BaseModel):
     fqId: str
     rank: str
     accepted: Optional[bool] = None
@@ -24,27 +24,56 @@ class Plant(BaseModel):
     name: Optional[str] = None
     snippet: Optional[str] = None
     url: Optional[str] = None
-    images: Optional[Any] = None
-    synonymOf: Optional[Dict[str, Any]] = None
+    images: Optional[List[Any]] = None
 
-# Classification Data Model
+# Search API Response model
+class PlantSearchResponse(BaseModel):
+    totalResults: int
+    page: int
+    totalPages: int
+    perPage: int
+    cursor: Optional[str]
+    message: Optional[str]
+    results: List[PlantResult]
+
+# Classification structure
 class Classification(BaseModel):
     fqId: str
     name: str
-    author: Optional[str] = None
+    author: Optional[str]
     rank: str
     taxonomicStatus: str
 
-# Synonym Data Model
+# synonym structure
 class Synonym(BaseModel):
     fqId: str
     name: str
-    author: Optional[str] = None
+    author: Optional[str]
     rank: str
     taxonomicStatus: str
 
+# Distribution locations
+class DistributionLocation(BaseModel):
+    featureId: int
+    tdwgCode: str
+    tdwgLevel: int
+    establishment: str
+    locationTree: List[str]
+    name: str
+
+# Distribution details 
+class Distribution(BaseModel):
+    natives: Optional[List[DistributionLocation]] = []
+    introduced: Optional[List[DistributionLocation]] = []
+
+# Geometry Envelope Point
+class EnvelopePoint(BaseModel):
+    x: float
+    y: float
+    z: Optional[str]
+
 # Main Plant Data Model
-class PlantData(BaseModel):
+class PlantDetail(BaseModel):
     modified: str
     bibliographicCitation: str
     genus: str
@@ -58,12 +87,12 @@ class PlantData(BaseModel):
     nomenclaturalCode: str
     source: str
     namePublishedInYear: int
-    taxonRemarks: str
-    nomenclaturalStatus: str
-    lifeform: str
-    climate: str
+    taxonRemarks: Optional[str]
+    nomenclaturalStatus: Optional[str]
+    lifeform: Optional[str]
+    climate: Optional[str]
     hybrid: bool
-    paftolId: str
+    paftolId: Optional[str] = None
     plantae: bool
     fungi: bool
     locations: List[str]
@@ -76,13 +105,14 @@ class PlantData(BaseModel):
     reference: str
     classification: List[Classification]
     synonyms: List[Synonym]
-
+    basionymOf: Optional[List[Synonym]] = []
+    distribution: Optional[Distribution] = None
+    distributionEnvelope: Optional[List[EnvelopePoint]] = []
 
 class PlantQueryModel(BaseModel):
     """Extracted plant information from user message"""
     genus: str = Field(..., description="Genus of the plant, e.g Mangifera")
     species: str = Field(..., description="Species of the plant, e.g indica")
-
 
 class POWOAgent(IChatBioAgent):
     def __init__(self):
@@ -149,6 +179,12 @@ class POWOAgent(IChatBioAgent):
                     await context.reply(text = "Search failed due to server error")
                     return
                 
+                # validate serach query response
+                try:
+                    PlantSearchResponse.model_validate(response.json()) 
+                except ValidationError as e:
+                    await context.reply( "Search query response validation error", data={"error": e.errors(), "raw": response.json() })
+                
                 # Extract the unique fqids from the search results
                 search_data = response.json()
                 fqids = self._extract_fqids(search_data)
@@ -184,6 +220,11 @@ class POWOAgent(IChatBioAgent):
                     detail_response = requests.get(detail_url)
                     
                     if detail_response.status_code == 200:
+                        try:
+                            PlantDetail.model_validate(detail_response.json())
+                        except ValidationError as e:
+                            await context.reply("Plant detail response validation error", data={"error": e.errors()})
+                            return
                         plant_details_url.append(detail_url)
                         detail_data = detail_response.json()
                         plant_details.append(detail_data)
