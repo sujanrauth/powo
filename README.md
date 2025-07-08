@@ -22,3 +22,11 @@ agent card should be present at http://localhost:9999/.well-known/agent.json if 
 #### Test
 
 ``` python3.12 -m pytest -s   ```
+
+
+## The agent is hosted in AWS EC2 Instance 
+
+```curl http://3.148.187.65:9999/.well-known/agent.json```
+
+To check if the service is up and running and http://3.148.187.65:9999/ is the end point
+
