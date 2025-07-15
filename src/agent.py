@@ -114,13 +114,14 @@ class PlantQueryModel(BaseModel):
     genus: str = Field(..., description="Genus of the plant, e.g Mangifera")
     species: str = Field(..., description="Species of the plant, e.g indica")
 
+
 class POWOAgent(IChatBioAgent):
     def __init__(self):
         self.agent_card = AgentCard(
             name="POWO Plant Data Agent",
             description="Retrieves detailed plant information from Kew Gardens POWO API using genus and species names.",
             icon=None,
-            url="http://localhost:9999",
+            url="https://powoagent.duckdns.org", #change it based on deployment site
             entrypoints=[
                 AgentEntrypoint(
                     id="get_plant_info",
