@@ -141,12 +141,12 @@ class POWOAgent(IChatBioAgent):
             # process: IChatBioAgentProcess
 
             try:
-                openai_client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+                openai_client = AsyncOpenAI( base_url=os.getenv("AI_BASE_URL"), api_key=os.getenv("AI_KEY"))
                 instructor_client = instructor.patch(openai_client)
 
                 # Extract plant information from the user request using OpenAI
                 plant_query: PlantQueryModel = await instructor_client.chat.completions.create(
-                    model="gpt-4",
+                    model="llama-3.3-70b-instruct",
                     response_model=PlantQueryModel,
                     messages=[
                         {
@@ -156,6 +156,13 @@ class POWOAgent(IChatBioAgent):
                             Instructions:
                             1. Identify the genus and species from the user's message
                             2. If multiple plants are mentioned, focus on the first/main one 
+                            3. Always respond **only** in this strict JSON format (no prose):
+
+                            ```json
+                            {
+                            "genus": "GenusName",
+                            "species": "SpeciesName"
+                            }```
                             """
                         },
                         {"role": "user", "content": request}
@@ -250,7 +257,7 @@ class POWOAgent(IChatBioAgent):
                 await context.reply(f"Found {len(fqids)} total matches for {plant_query.genus} {plant_query.species}. The artifact contains the complete botanical information.")
 
             except InstructorRetryException as e:
-                await context.reply("Sorry, I couldn't extract plant information from your request.")
+                await context.reply("Sorry, I couldn't extract plant information from your request.", data={ "error": str(e)})
             except Exception as e:
                 await context.reply("An error occurred while retrieving plant information", data={ "error": str(e)})
 
