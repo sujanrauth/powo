@@ -119,9 +119,9 @@ class POWOAgent(IChatBioAgent):
     def __init__(self):
         self.agent_card = AgentCard(
             name="POWO Plant Data Agent",
-            description="Retrieves detailed plant information from Kew Gardens POWO API using genus and species names.",
+            description="Retrieves detailed plant information from Kew Gardens POWO and IPNI data source using genus and species names.",
             icon=None,
-            url="https://powoagent.duckdns.org", #change it based on deployment site
+            url="http://localhost:29201", #change it based on deployment site
             entrypoints=[
                 AgentEntrypoint(
                     id="get_plant_info",
@@ -137,7 +137,7 @@ class POWOAgent(IChatBioAgent):
 
     @override
     async def run(self, context: ResponseContext, request: str, entrypoint: str, params: Optional[BaseModel]):
-        async with context.begin_process(summary="Analyzing plant request") as process:
+        async with context.begin_process(summary="Analyzing plant data request") as process:
             # process: IChatBioAgentProcess
 
             try:
@@ -178,8 +178,8 @@ class POWOAgent(IChatBioAgent):
                 # Search for plants using Kew Gardens API
                 search_url = self._build_search_url(plant_query.genus, plant_query.species)
                 
-                await process.log(f"Searching Kew Gardens database by querying: {plant_query.genus} {plant_query.species}", 
-                                  data={"search_url": search_url})
+                await process.log(f"Searching Kew Gardens Plants of the World Online(POWO) database.", 
+                                  data={"genus": plant_query.genus, "species": plant_query.species, "search_url": search_url,})
 
                 # Call the serach API to get all the occurances of the given the plant scientific name 
                 response = requests.get(search_url)
@@ -204,8 +204,8 @@ class POWOAgent(IChatBioAgent):
                 # Create an ArtifactMessage with data from the search api
                 await process.create_artifact(
                     mimetype="text/markdown",
-                    description=f"Search results for {plant_query.genus} {plant_query.species}",
-                    uris=search_url,
+                    description=f"Search results for {plant_query.genus} {plant_query.species} from POWO",
+                    uris=[search_url],
                     metadata={
                         "genus": plant_query.genus,
                         "species": plant_query.species,
@@ -217,7 +217,7 @@ class POWOAgent(IChatBioAgent):
                 await process.log(f"Search completed. Found {len(fqids)} matching plants.", data={"total_matches": len(fqids)})
 
                 # Get detailed information for each fqid
-                await process.log(f"Retrieving plant details by fetching detailed information for {len(fqids)} plants.")
+                await process.log(f"Retrieving detailed information from Kew Gardens International Plant Names Index(IPNI) for {len(fqids)} plants.")
 
                 plant_details = []
                 plant_details_url = []
@@ -242,7 +242,7 @@ class POWOAgent(IChatBioAgent):
                 # Create an ArtifactMessage with all the data
                 await process.create_artifact(
                     mimetype="text/markdown",
-                    description=f"Detailed botanical information for {plant_query.genus} {plant_query.species}",
+                    description=f"Detailed botanical information for {plant_query.genus} {plant_query.species} from IPNI",
                     uris=plant_details_url,
                     metadata={
                         "genus": plant_query.genus,
