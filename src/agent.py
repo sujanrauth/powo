@@ -121,8 +121,7 @@ class POWOAgent(IChatBioAgent):
             name="POWO Plant Data Agent",
             description="Retrieves detailed plant information from Kew Gardens POWO and IPNI data source using genus and species names.",
             icon=None,
-            # url="http://localhost:29201", #change it based on deployment site
-            url="https://powoagent.duckdns.org",
+            url="http://icb-agents.acis.ufl.edu/powo/",
             entrypoints=[
                 AgentEntrypoint(
                     id="get_plant_info",
