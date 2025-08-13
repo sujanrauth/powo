@@ -138,7 +138,7 @@ class POWOAgent(IChatBioAgent):
 
     @override
     async def run(self, context: ResponseContext, request: str, entrypoint: str, params: Optional[BaseModel]):
-        async with context.begin_process(summary="Analyzing plant data request") as process:
+        async with context.begin_process(summary="Requesting POWO for botanical info") as process:
             # process: IChatBioAgentProcess
 
             try:
